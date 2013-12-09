@@ -36,19 +36,13 @@ namespace EventSource4Net
 
                     if (bytesRead > 0) // stream has not reached the end yet
                     {
-                        //Console.WriteLine("ReadCallback {0} bytesRead", bytesRead);
                         string text = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                        string[] lines = text.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
+                        //Remove empty carriage returns and line feeds, they don't need to be processed
+                        string[] lines = text.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
                         ServerSentEvent sse = null;
                         foreach (string line in lines)
                         {
-                            // Dispatch message if empty lne
-                            if(string.IsNullOrEmpty(line.Trim()) && sse!=null)
-                            {
-                                _logger.Trace("Message received");
-                                msgReceived(sse);
-                            }
-                            else if(line.StartsWith(":"))
+                            if (line.StartsWith(":"))
                             {
                                 // This a comment, just log it.
                                 _logger.Trace("A comment was received: " + line);
@@ -96,6 +90,12 @@ namespace EventSource4Net
                                     _logger.Warn("A unknown line was received: " + line);
                                 }
                             }
+                        }
+                        // Dispatch message after all the lines have been processed
+                        if (sse != null)
+                        {
+                            _logger.Trace("Message received");
+                            msgReceived(sse);
                         }
 
                         return this;
